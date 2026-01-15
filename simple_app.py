@@ -21,7 +21,7 @@ POLLING_INTERVAL = 60
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('models/gemini-pro')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # In-memory storage
 news_articles = []
