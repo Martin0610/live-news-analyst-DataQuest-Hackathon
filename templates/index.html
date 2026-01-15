@@ -190,6 +190,53 @@
             border-radius: 10px;
             margin-top: 20px;
         }
+        
+        .article-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .article-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+        
+        .article-meta {
+            color: #718096;
+            font-size: 0.85em;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .stat-card h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -238,13 +285,27 @@
             
             <div id="result"></div>
         </div>
+        
+        <div class="status-card" style="margin-top: 20px;">
+            <h2>📰 Latest Articles</h2>
+            <div id="articleFeed" style="margin-top: 15px;">
+                <p style="color: #718096;">Loading articles...</p>
+            </div>
+        </div>
+        
+        <div class="status-card" style="margin-top: 20px;">
+            <h2>📊 Statistics</h2>
+            <div id="statistics" style="margin-top: 15px;">
+                <p style="color: #718096;">Loading statistics...</p>
+            </div>
+        </div>
     </div>
     
     <script>
         // Update status every 5 seconds
         async function updateStatus() {
             try {
-                const response = await fetch('/');
+                const response = await fetch('/api/status');
                 const data = await response.json();
                 document.getElementById('articleCount').textContent = data.articles_count;
                 document.getElementById('statusIndicator').textContent = 
@@ -254,9 +315,78 @@
             }
         }
         
-        // Initial status update
+        // Update articles feed
+        async function updateArticles() {
+            try {
+                const response = await fetch('/api/articles');
+                const data = await response.json();
+                const feed = document.getElementById('articleFeed');
+                
+                if (data.articles.length === 0) {
+                    feed.innerHTML = '<p style="color: #718096;">No articles yet. Waiting for first batch...</p>';
+                } else {
+                    let html = '';
+                    data.articles.reverse().forEach(article => {
+                        html += '<div class="article-item">';
+                        html += `<div class="article-title">${article.title}</div>`;
+                        html += '<div class="article-meta">';
+                        html += `<span class="badge">${article.topic}</span>`;
+                        html += `${article.source}`;
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    feed.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error updating articles:', error);
+            }
+        }
+        
+        // Update statistics
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                const stats = document.getElementById('statistics');
+                
+                if (data.total_articles === 0) {
+                    stats.innerHTML = '<p style="color: #718096;">No statistics yet...</p>';
+                } else {
+                    let html = '<div class="stat-grid">';
+                    
+                    // By topic
+                    html += '<div class="stat-card">';
+                    html += '<h4>📊 By Topic</h4>';
+                    for (const [topic, count] of Object.entries(data.by_topic)) {
+                        html += `<div class="stat-item"><span>${topic}</span><span>${count}</span></div>`;
+                    }
+                    html += '</div>';
+                    
+                    // Top sources
+                    html += '<div class="stat-card">';
+                    html += '<h4>📰 Top Sources</h4>';
+                    for (const [source, count] of Object.entries(data.top_sources)) {
+                        html += `<div class="stat-item"><span>${source}</span><span>${count}</span></div>`;
+                    }
+                    html += '</div>';
+                    
+                    html += '</div>';
+                    stats.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+        
+        // Initial updates
         updateStatus();
+        updateArticles();
+        updateStats();
+        
+        // Periodic updates
         setInterval(updateStatus, 5000);
+        setInterval(updateArticles, 10000);
+        setInterval(updateStats, 15000);
         
         // Handle form submission
         document.getElementById('queryForm').addEventListener('submit', async (e) => {

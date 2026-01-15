@@ -91,6 +91,45 @@ def status():
     })
 
 
+@app.route('/api/articles')
+def get_articles():
+    """Get recent articles"""
+    recent = news_articles[-10:] if len(news_articles) > 10 else news_articles
+    return jsonify({
+        "articles": [
+            {
+                "title": a['title'],
+                "source": a['source'],
+                "topic": a['topic'],
+                "published_at": a['published_at'],
+                "url": a['url']
+            }
+            for a in recent
+        ],
+        "total": len(news_articles)
+    })
+
+
+@app.route('/api/stats')
+def get_stats():
+    """Get statistics"""
+    topic_counts = {}
+    source_counts = {}
+    
+    for article in news_articles:
+        topic = article['topic']
+        source = article['source']
+        topic_counts[topic] = topic_counts.get(topic, 0) + 1
+        source_counts[source] = source_counts.get(source, 0) + 1
+    
+    return jsonify({
+        "total_articles": len(news_articles),
+        "by_topic": topic_counts,
+        "top_sources": dict(sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:5]),
+        "last_updated": news_articles[-1]['fetched_at'] if news_articles else None
+    })
+
+
 @app.route('/v1/pw_ai_answer', methods=['POST'])
 def answer_question():
     """Answer questions using Gemini and news context"""
