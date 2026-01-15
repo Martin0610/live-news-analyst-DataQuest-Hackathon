@@ -6,7 +6,7 @@ import time
 import requests
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -77,6 +77,13 @@ def fetch_news():
 
 @app.route('/')
 def home():
+    """Serve the web interface"""
+    return render_template('index.html')
+
+
+@app.route('/api/status')
+def status():
+    """API endpoint for status"""
     return jsonify({
         "status": "running",
         "articles_count": len(news_articles),

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live News Analyst - Real-Time RAG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        .query-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .answer-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .answer-card h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .answer-text {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .sources {
+            margin-top: 20px;
+        }
+        
+        .source-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .source-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .source-meta {
+            color: #718096;
+            font-size: 0.9em;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-right: 10px;
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Live News Analyst</h1>
+            <p>Real-Time RAG with Streaming News Data</p>
+        </div>
+        
+        <div class="status-card">
+            <h2>📊 System Status</h2>
+            <div class="status-grid">
+                <div class="stat-box">
+                    <div class="stat-number" id="articleCount">-</div>
+                    <div class="stat-label">Articles</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statusIndicator">🟢</div>
+                    <div class="stat-label">Status</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Topics</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="query-card">
+            <h2>💬 Ask About Latest News</h2>
+            <form id="queryForm">
+                <div class="input-group">
+                    <label for="question">Your Question:</label>
+                    <input 
+                        type="text" 
+                        id="question" 
+                        placeholder="What are the latest AI developments?"
+                        required
+                    >
+                </div>
+                <button type="submit" id="submitBtn">Get Answer</button>
+            </form>
+            
+            <div id="loading" class="loading" style="display: none;">
+                <p>🤔 Analyzing latest news...</p>
+            </div>
+            
+            <div id="result"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Update status every 5 seconds
+        async function updateStatus() {
+            try {
+                const response = await fetch('/');
+                const data = await response.json();
+                document.getElementById('articleCount').textContent = data.articles_count;
+                document.getElementById('statusIndicator').textContent = 
+                    data.status === 'running' ? '🟢' : '🔴';
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+        
+        // Initial status update
+        updateStatus();
+        setInterval(updateStatus, 5000);
+        
+        // Handle form submission
+        document.getElementById('queryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const question = document.getElementById('question').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            // Show loading
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const response = await fetch('/v1/pw_ai_answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: question })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Display answer
+                    let html = '<div class="answer-card">';
+                    html += '<h3>💡 Answer</h3>';
+                    html += `<div class="answer-text">${data.answer}</div>`;
+                    
+                    if (data.sources && data.sources.length > 0) {
+                        html += '<div class="sources">';
+                        html += '<h3>📚 Sources</h3>';
+                        data.sources.forEach(source => {
+                            html += '<div class="source-item">';
+                            html += `<div class="source-title">${source.title}</div>`;
+                            html += '<div class="source-meta">';
+                            html += `<span class="badge">${source.topic}</span>`;
+                            html += `${source.source}`;
+                            html += '</div>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    result.innerHTML = html;
+                } else {
+                    result.innerHTML = `<div class="error">Error: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
