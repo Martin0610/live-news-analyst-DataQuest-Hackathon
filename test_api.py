@@ -11,11 +11,29 @@ def test_api(base_url="http://localhost:8080"):
     print(f"🧪 Testing API at: {base_url}")
     print("=" * 60)
     
+    # Test 1: Health check
+    try:
+        print(f"\n📤 Testing health endpoint...")
+        response = requests.get(f"{base_url}/", timeout=10)
+        print(f"📥 Response Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Server is running!")
+            print(f"   Articles: {data.get('articles_count', 0)}")
+            print(f"   Topics: {', '.join(data.get('topics', []))}")
+        else:
+            print(f"⚠️  Unexpected status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Health check failed: {e}")
+        return 1
+    
+    # Test 2: Question answering
     endpoint = f"{base_url}/v1/pw_ai_answer"
     test_question = "What are the latest technology news?"
     
     try:
-        print(f"\n📤 Sending request...")
+        print(f"\n📤 Sending question...")
         print(f"   Question: {test_question}")
         
         response = requests.post(
@@ -41,7 +59,8 @@ def test_api(base_url="http://localhost:8080"):
             if sources:
                 print("\nTop 3 sources:")
                 for i, source in enumerate(sources[:3], 1):
-                    print(f"  {i}. {source.get('metadata', {}).get('source', 'Unknown')}")
+                    print(f"  {i}. {source.get('title', 'Unknown')}")
+                    print(f"     Source: {source.get('source', 'Unknown')}")
             
             return 0
         else:
@@ -52,7 +71,7 @@ def test_api(base_url="http://localhost:8080"):
     except requests.exceptions.ConnectionError:
         print("\n❌ ERROR: Cannot connect to the server")
         print("   Make sure the app is running:")
-        print("   python app.py")
+        print("   python simple_app.py")
         return 1
     except requests.exceptions.Timeout:
         print("\n❌ ERROR: Request timed out")
