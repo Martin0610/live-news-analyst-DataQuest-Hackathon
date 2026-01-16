@@ -137,11 +137,15 @@ def answer_question():
         data = request.get_json()
         question = data.get('prompt', '')
         
+        print(f"📥 Received question: {question[:100]}")
+        
         if not question:
             return jsonify({"error": "No prompt provided"}), 400
         
         # Get recent articles as context
         recent_articles = news_articles[-20:] if len(news_articles) > 20 else news_articles
+        
+        print(f"📚 Using {len(recent_articles)} articles for context")
         
         if not recent_articles:
             return jsonify({
@@ -158,18 +162,21 @@ def answer_question():
         # Generate answer with Gemini
         prompt = f"{context}\nQuestion: {question}\n\nAnswer based on the news above:"
         
-        print(f"🤔 Generating answer for: {question[:50]}...")
+        print(f"🤔 Calling Gemini API...")
         
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                max_output_tokens=500,
+        try:
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=500,
+                )
             )
-        )
-        answer = response.text
-        
-        print(f"✅ Answer generated successfully")
+            answer = response.text
+            print(f"✅ Answer generated: {len(answer)} characters")
+        except Exception as gemini_error:
+            print(f"❌ Gemini API Error: {type(gemini_error).__name__}: {str(gemini_error)}")
+            raise
         
         # Return response with sources
         sources = [
@@ -189,18 +196,21 @@ def answer_question():
         
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Error generating answer: {error_msg}")
+        error_type = type(e).__name__
+        print(f"❌ ERROR in answer_question: {error_type}: {error_msg}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
         
         # Return user-friendly error
         if "quota" in error_msg.lower() or "429" in error_msg:
             return jsonify({
                 "error": "API quota exceeded. Please try again in a few moments.",
-                "details": "Gemini API rate limit reached"
+                "details": f"{error_type}: {error_msg}"
             }), 429
         else:
             return jsonify({
                 "error": "Failed to generate answer",
-                "details": error_msg
+                "details": f"{error_type}: {error_msg}"
             }), 500
 
 
