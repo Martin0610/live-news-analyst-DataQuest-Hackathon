@@ -21,7 +21,7 @@ POLLING_INTERVAL = 60
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')  # Changed to stable model
 
 # In-memory storage
 news_articles = []
@@ -149,18 +149,27 @@ def answer_question():
                 "sources": []
             })
         
-        # Build context from articles
-        context = "Here are the latest news articles:\n\n"
-        for i, article in enumerate(recent_articles, 1):
+        # Build context from articles (shorter to avoid token limits)
+        context = "Latest news:\n\n"
+        for i, article in enumerate(recent_articles[-10:], 1):  # Only use last 10
             context += f"{i}. {article['title']}\n"
-            context += f"   Source: {article['source']} | Topic: {article['topic']}\n"
-            context += f"   {article['description']}\n\n"
+            context += f"   {article['description'][:200]}...\n\n"  # Limit description length
         
         # Generate answer with Gemini
-        prompt = f"{context}\n\nBased on the above news articles, please answer this question:\n{question}"
+        prompt = f"{context}\nQuestion: {question}\n\nAnswer based on the news above:"
         
-        response = model.generate_content(prompt)
+        print(f"🤔 Generating answer for: {question[:50]}...")
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.7,
+                max_output_tokens=500,
+            )
+        )
         answer = response.text
+        
+        print(f"✅ Answer generated successfully")
         
         # Return response with sources
         sources = [
@@ -170,7 +179,7 @@ def answer_question():
                 "url": article['url'],
                 "topic": article['topic']
             }
-            for article in recent_articles
+            for article in recent_articles[-10:]
         ]
         
         return jsonify({
@@ -179,8 +188,20 @@ def answer_question():
         })
         
     except Exception as e:
-        print(f"❌ Error: {e}")
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        print(f"❌ Error generating answer: {error_msg}")
+        
+        # Return user-friendly error
+        if "quota" in error_msg.lower() or "429" in error_msg:
+            return jsonify({
+                "error": "API quota exceeded. Please try again in a few moments.",
+                "details": "Gemini API rate limit reached"
+            }), 429
+        else:
+            return jsonify({
+                "error": "Failed to generate answer",
+                "details": error_msg
+            }), 500
 
 
 if __name__ == '__main__':
