@@ -20,8 +20,17 @@ NEWS_TOPICS = ["technology", "business", "science"]
 POLLING_INTERVAL = 60
 
 # Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')  # Changed to stable model
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        print("✅ Gemini model initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Warning: Gemini model initialization failed: {e}")
+        model = None
+else:
+    print("⚠️  Warning: GEMINI_API_KEY not found")
+    model = None
 
 # In-memory storage
 news_articles = []
@@ -142,6 +151,13 @@ def answer_question():
         if not question:
             return jsonify({"error": "No prompt provided"}), 400
         
+        # Check if Gemini API key is configured
+        if not GEMINI_API_KEY or not model:
+            return jsonify({
+                "error": "Gemini API not properly configured",
+                "details": "GEMINI_API_KEY environment variable is missing or model failed to initialize"
+            }), 500
+        
         # Get recent articles as context
         recent_articles = news_articles[-20:] if len(news_articles) > 20 else news_articles
         
@@ -149,36 +165,83 @@ def answer_question():
         
         if not recent_articles:
             return jsonify({
-                "answer": "No news articles available yet. Please wait for the first batch to be fetched.",
+                "answer": "No news articles available yet. The system is still fetching the first batch of articles. Please wait a moment and try again.",
                 "sources": []
             })
         
-        # Build context from articles (shorter to avoid token limits)
-        context = "Latest news:\n\n"
-        for i, article in enumerate(recent_articles[-10:], 1):  # Only use last 10
+        # Build shorter context to avoid token limits
+        context = "Recent news headlines:\n\n"
+        for i, article in enumerate(recent_articles[-5:], 1):  # Only use last 5 articles
             context += f"{i}. {article['title']}\n"
-            context += f"   {article['description'][:200]}...\n\n"  # Limit description length
+            if article['description']:
+                context += f"   Summary: {article['description'][:150]}...\n"
+            context += f"   Source: {article['source']} | Topic: {article['topic']}\n\n"
         
-        # Generate answer with Gemini
-        prompt = f"{context}\nQuestion: {question}\n\nAnswer based on the news above:"
+        # Shorter, more focused prompt
+        prompt = f"""Based on these recent news articles:
+
+{context}
+
+Question: {question}
+
+Please provide a helpful answer based on the news above. If the question is not related to the news, say so politely."""
         
-        print(f"🤔 Calling Gemini API...")
+        print(f"🤔 Calling Gemini API with prompt length: {len(prompt)} characters")
         
         try:
+            # Use more conservative settings
             response = model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
-                    temperature=0.7,
-                    max_output_tokens=500,
+                    temperature=0.3,  # Lower temperature for more focused responses
+                    max_output_tokens=300,  # Shorter responses
+                    top_p=0.8,
+                    top_k=40
                 )
             )
-            answer = response.text
+            
+            if not response.text:
+                raise Exception("Empty response from Gemini")
+                
+            answer = response.text.strip()
             print(f"✅ Answer generated: {len(answer)} characters")
+            
         except Exception as gemini_error:
             print(f"❌ Gemini API Error: {type(gemini_error).__name__}: {str(gemini_error)}")
-            raise
+            
+            # Handle specific Gemini errors
+            error_str = str(gemini_error).lower()
+            if "quota" in error_str or "429" in error_str:
+                return jsonify({
+                    "error": "API quota exceeded. Please try again in a few moments.",
+                    "details": "Gemini API rate limit reached"
+                }), 429
+            elif "safety" in error_str:
+                return jsonify({
+                    "error": "Content filtered for safety. Please try rephrasing your question.",
+                    "details": "Gemini safety filters triggered"
+                }), 400
+            elif "invalid" in error_str and "key" in error_str:
+                return jsonify({
+                    "error": "API configuration error. Please contact support.",
+                    "details": "Invalid API key"
+                }), 500
+            else:
+                # Generic fallback response
+                return jsonify({
+                    "answer": f"I'm having trouble processing your question right now. However, based on the recent news, here are the latest headlines: {', '.join([a['title'][:50] + '...' for a in recent_articles[-3:]])}",
+                    "sources": [
+                        {
+                            "title": article['title'],
+                            "source": article['source'],
+                            "url": article['url'],
+                            "topic": article['topic']
+                        }
+                        for article in recent_articles[-3:]
+                    ]
+                })
         
-        # Return response with sources
+        # Return successful response
         sources = [
             {
                 "title": article['title'],
@@ -186,12 +249,12 @@ def answer_question():
                 "url": article['url'],
                 "topic": article['topic']
             }
-            for article in recent_articles[-10:]
+            for article in recent_articles[-5:]
         ]
         
         return jsonify({
             "answer": answer,
-            "sources": sources[:5]  # Top 5 sources
+            "sources": sources
         })
         
     except Exception as e:
@@ -199,19 +262,15 @@ def answer_question():
         error_type = type(e).__name__
         print(f"❌ ERROR in answer_question: {error_type}: {error_msg}")
         import traceback
-        print(f"❌ Traceback: {traceback.format_exc()}")
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         
-        # Return user-friendly error
-        if "quota" in error_msg.lower() or "429" in error_msg:
-            return jsonify({
-                "error": "API quota exceeded. Please try again in a few moments.",
-                "details": f"{error_type}: {error_msg}"
-            }), 429
-        else:
-            return jsonify({
-                "error": "Failed to generate answer",
-                "details": f"{error_type}: {error_msg}"
-            }), 500
+        # Always return a response, even if there's an error
+        return jsonify({
+            "answer": "I'm experiencing technical difficulties right now. Please try again in a moment, or check back as I continue to gather more news articles.",
+            "sources": [],
+            "error": f"Technical error: {error_type}",
+            "details": error_msg
+        }), 500
 
 
 if __name__ == '__main__':
