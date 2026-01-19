@@ -430,7 +430,7 @@ def get_stats():
 
 @app.route('/v1/pw_ai_answer', methods=['POST'])
 def answer_question():
-    """Answer questions using intelligent text analysis - 100% FREE!"""
+    """HYBRID AI: Premium Gemini responses with intelligent fallback"""
     try:
         data = request.get_json()
         question = data.get('prompt', '')
@@ -448,7 +448,8 @@ def answer_question():
         if not recent_articles:
             return jsonify({
                 "answer": "No news articles available yet. The system is still fetching the first batch of articles. Please wait a moment and try again.",
-                "sources": []
+                "sources": [],
+                "method": "no_data"
             })
         
         # Find relevant articles
@@ -456,30 +457,55 @@ def answer_question():
         
         print(f"🎯 Found {len(relevant_articles)} relevant articles")
         
-        # Generate smart answer
-        answer = generate_smart_answer(question, relevant_articles)
+        # TRY GEMINI FIRST (Premium Experience)
+        gemini_response = try_gemini_response(question, relevant_articles)
         
-        # Prepare sources
-        sources = [
-            {
-                "title": article['title'],
-                "source": article['source'],
-                "url": article['url'],
-                "topic": article['topic'],
-                "category": article.get('category', 'general')
-            }
-            for article in relevant_articles[:5]
-        ]
+        if gemini_response:
+            # SUCCESS: Premium Gemini AI response
+            sources = [
+                {
+                    "title": article['title'],
+                    "source": article['source'],
+                    "url": article['url'],
+                    "topic": article['topic'],
+                    "category": article.get('category', 'general')
+                }
+                for article in relevant_articles[:6]
+            ]
+            
+            return jsonify({
+                "answer": gemini_response,
+                "sources": sources,
+                "method": "gemini_ai",
+                "quality": "premium",
+                "articles_analyzed": len(recent_articles),
+                "relevant_found": len(relevant_articles)
+            })
         
-        print(f"✅ Answer generated: {len(answer)} characters")
-        
-        return jsonify({
-            "answer": answer,
-            "sources": sources,
-            "method": "intelligent_analysis",
-            "articles_analyzed": len(recent_articles),
-            "relevant_found": len(relevant_articles)
-        })
+        else:
+            # FALLBACK: Advanced intelligent analysis
+            print("🔄 Using advanced fallback analysis")
+            answer = generate_smart_answer(question, relevant_articles)
+            
+            sources = [
+                {
+                    "title": article['title'],
+                    "source": article['source'],
+                    "url": article['url'],
+                    "topic": article['topic'],
+                    "category": article.get('category', 'general')
+                }
+                for article in relevant_articles[:5]
+            ]
+            
+            return jsonify({
+                "answer": answer,
+                "sources": sources,
+                "method": "intelligent_analysis",
+                "quality": "advanced",
+                "articles_analyzed": len(recent_articles),
+                "relevant_found": len(relevant_articles)
+            })
         
     except Exception as e:
         error_msg = str(e)
@@ -503,6 +529,7 @@ def answer_question():
                 }
                 for article in recent
             ],
+            "method": "error_fallback",
             "error": f"Technical error: {error_type}",
             "details": error_msg
         }), 500
@@ -512,8 +539,12 @@ if __name__ == '__main__':
     fetcher_thread = threading.Thread(target=fetch_news, daemon=True)
     fetcher_thread.start()
     
-    print("🚀 Starting Live News Analyst (100% FREE VERSION)")
-    print("💚 No paid APIs - Uses intelligent text analysis!")
+    print("🚀 Starting Live News Analyst (HYBRID AI SYSTEM)")
+    if gemini_model:
+        print("🤖 PREMIUM MODE: Gemini AI + Advanced Fallback")
+    else:
+        print("🧠 ADVANCED MODE: Intelligent Analysis System")
+    print("💚 100% FREE to run - No required paid APIs!")
     print(f"📡 Monitoring topics: {', '.join(NEWS_TOPICS)}")
     print(f"✅ Server starting on port 8080")
     
