@@ -6,8 +6,6 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python simple_app.py
     envVars:
-      - key: GEMINI_API_KEY
-        sync: false
       - key: GNEWS_API_KEY
         sync: false
       - key: PYTHON_VERSION
