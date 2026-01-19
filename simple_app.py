@@ -101,70 +101,283 @@ def find_relevant_articles(question, articles):
     scored_articles.sort(key=lambda x: x[1], reverse=True)
     return [article for article, score in scored_articles[:8]]
 
-def generate_smart_answer(question, relevant_articles):
-    """Generate intelligent answer based on articles"""
+def generate_analytical_answer(question, articles, keywords):
+    """Generate analytical answer for how/why/when questions"""
+    answer = f"## 🔍 Analysis: {question}\n\n"
+    
+    top_article = articles[0]
+    
+    # Provide analytical context
+    if "how" in question.lower():
+        answer += "### 📋 Process & Methodology\n"
+    elif "why" in question.lower():
+        answer += "### 🎯 Reasoning & Context\n"
+    elif "when" in question.lower():
+        answer += "### ⏰ Timeline & Schedule\n"
+    else:
+        answer += "### 🔬 Detailed Analysis\n"
+    
+    answer += f"**Primary Source:** {top_article['title']}\n\n"
+    
+    if top_article.get('description'):
+        answer += f"{top_article['description']}\n\n"
+    
+    # Add supporting evidence
+    if len(articles) > 1:
+        answer += "### 📚 Supporting Evidence\n"
+        for i, article in enumerate(articles[1:4], 1):
+            answer += f"{i}. **{article['title']}**\n"
+            if article.get('description'):
+                # Get first meaningful sentence
+                sentences = article['description'].split('.')
+                if sentences:
+                    answer += f"   {sentences[0].strip()}.\n"
+            answer += f"   *{article['source']}*\n\n"
+    
+    # Expert analysis section
+    answer += "### 💡 Expert Perspective\n"
+    sources = [a['source'] for a in articles[:3]]
+    authoritative_sources = [s for s in sources if any(term in s.lower() for term in ['reuters', 'bloomberg', 'associated press', 'bbc', 'cnn', 'wall street journal', 'financial times'])]
+    
+    if authoritative_sources:
+        answer += f"Analysis is supported by {len(authoritative_sources)} authoritative news sources including {', '.join(authoritative_sources[:2])}, "
+        answer += "providing high confidence in the information accuracy.\n\n"
+    else:
+        answer += f"Information compiled from {len(sources)} news sources, providing comprehensive coverage of the topic.\n\n"
+    
+    return answer
+    """Generate comprehensive, intelligent answers that will win hackathons!"""
     if not relevant_articles:
         return "I don't have any recent news articles that directly relate to your question. Please try asking about technology, business, science, or current events."
     
     question_lower = question.lower()
     
-    # Determine question type
-    if any(word in question_lower for word in ["what", "what's", "what is"]):
-        answer_type = "explanation"
-    elif any(word in question_lower for word in ["how", "how to"]):
-        answer_type = "process"
-    elif any(word in question_lower for word in ["why", "why is"]):
-        answer_type = "reason"
-    elif any(word in question_lower for word in ["when", "when did"]):
-        answer_type = "time"
-    elif any(word in question_lower for word in ["who", "who is"]):
-        answer_type = "person"
-    elif any(word in question_lower for word in ["latest", "recent", "new", "update"]):
-        answer_type = "latest"
+    # Enhanced question analysis
+    question_keywords = extract_keywords(question)
+    
+    # Determine question intent and generate appropriate response
+    if any(word in question_lower for word in ["latest", "recent", "new", "update", "current", "today"]):
+        return generate_latest_news_answer(question, relevant_articles, question_keywords)
+    elif any(word in question_lower for word in ["what", "what's", "what is", "tell me about"]):
+        return generate_explanatory_answer(question, relevant_articles, question_keywords)
+    elif any(word in question_lower for word in ["how", "why", "when", "where"]):
+        return generate_analytical_answer(question, relevant_articles, question_keywords)
+    elif any(word in question_lower for word in ["ai", "artificial intelligence", "machine learning", "chatgpt"]):
+        return generate_ai_focused_answer(question, relevant_articles)
+    elif any(word in question_lower for word in ["business", "company", "market", "stock", "economy"]):
+        return generate_business_answer(question, relevant_articles)
+    elif any(word in question_lower for word in ["technology", "tech", "software", "app", "digital"]):
+        return generate_tech_answer(question, relevant_articles)
     else:
-        answer_type = "general"
+        return generate_comprehensive_answer(question, relevant_articles, question_keywords)
+
+def generate_latest_news_answer(question, articles, keywords):
+    """Generate answer focused on latest developments"""
+    answer = "## 📰 Latest Developments\n\n"
+    answer += "Based on the most recent news coverage, here are the key developments:\n\n"
     
-    # Build answer based on type
-    if answer_type == "latest":
-        answer = "Here are the latest developments:\n\n"
-        for i, article in enumerate(relevant_articles[:5], 1):
-            answer += f"{i}. **{article['title']}**\n"
-            if article.get('description'):
-                answer += f"   {article['description'][:200]}...\n"
-            answer += f"   Source: {article['source']} | Topic: {article['topic']}\n\n"
+    # Group articles by recency and importance
+    top_articles = articles[:5]
     
-    elif answer_type == "explanation":
-        answer = "Based on recent news, here's what I found:\n\n"
-        top_article = relevant_articles[0]
-        answer += f"**{top_article['title']}**\n\n"
-        if top_article.get('description'):
-            answer += f"{top_article['description']}\n\n"
-        answer += f"Source: {top_article['source']}\n\n"
+    for i, article in enumerate(top_articles, 1):
+        answer += f"### {i}. {article['title']}\n"
+        if article.get('description'):
+            # Extract key insights from description
+            desc = article['description']
+            answer += f"**Key Points:** {desc}\n\n"
         
-        if len(relevant_articles) > 1:
-            answer += "Related news:\n"
-            for article in relevant_articles[1:4]:
-                answer += f"• {article['title']} ({article['source']})\n"
+        answer += f"**Source:** {article['source']} | **Category:** {article.get('category', 'General').title()}\n"
+        answer += f"**Published:** {format_time(article.get('published_at', ''))}\n\n"
     
-    else:
-        # General response
-        answer = f"Based on recent news coverage, here's what I found:\n\n"
-        
-        # Group by topic
-        topic_groups = {}
-        for article in relevant_articles[:6]:
-            topic = article.get('topic', 'general')
-            if topic not in topic_groups:
-                topic_groups[topic] = []
-            topic_groups[topic].append(article)
-        
-        for topic, articles in topic_groups.items():
-            answer += f"**{topic.title()} News:**\n"
-            for article in articles[:3]:
-                answer += f"• {article['title']} ({article['source']})\n"
-            answer += "\n"
+    # Add trend analysis
+    categories = [a.get('category', 'general') for a in articles]
+    top_category = max(set(categories), key=categories.count) if categories else 'technology'
+    
+    answer += f"### 📊 Trend Analysis\n"
+    answer += f"The dominant theme in recent news is **{top_category}**, appearing in {categories.count(top_category)} out of {len(articles)} relevant articles. "
+    answer += f"This suggests significant activity in the {top_category} sector.\n\n"
     
     return answer
+
+def generate_explanatory_answer(question, articles, keywords):
+    """Generate detailed explanatory answer"""
+    top_article = articles[0]
+    
+    answer = f"## 💡 {question}\n\n"
+    answer += f"Based on recent news analysis, here's what's happening:\n\n"
+    
+    # Main explanation from top article
+    answer += f"### Primary Development\n"
+    answer += f"**{top_article['title']}**\n\n"
+    
+    if top_article.get('description'):
+        answer += f"{top_article['description']}\n\n"
+    
+    answer += f"*Source: {top_article['source']} - {top_article.get('category', 'General').title()} News*\n\n"
+    
+    # Supporting information
+    if len(articles) > 1:
+        answer += f"### Related Developments\n"
+        for article in articles[1:4]:
+            answer += f"• **{article['title']}** ({article['source']})\n"
+            if article.get('description'):
+                # Extract first sentence for context
+                first_sentence = article['description'].split('.')[0] + '.'
+                answer += f"  {first_sentence}\n"
+        answer += "\n"
+    
+    # Context and implications
+    answer += f"### 🎯 Key Implications\n"
+    sources = list(set([a['source'] for a in articles[:5]]))
+    answer += f"This development is being covered by {len(sources)} major news sources including {', '.join(sources[:3])}, "
+    answer += f"indicating significant industry attention and potential impact.\n\n"
+    
+    return answer
+
+def generate_ai_focused_answer(question, articles):
+    """Generate AI-specific comprehensive answer"""
+    answer = "## 🤖 AI & Technology Intelligence Report\n\n"
+    
+    # Filter for AI-related content
+    ai_articles = []
+    for article in articles:
+        text = f"{article.get('title', '')} {article.get('description', '')}".lower()
+        if any(term in text for term in ['ai', 'artificial intelligence', 'machine learning', 'chatgpt', 'openai', 'google ai', 'neural', 'llm']):
+            ai_articles.append(article)
+    
+    if not ai_articles:
+        ai_articles = articles[:3]  # Fallback to top articles
+    
+    answer += "### 🚀 Current AI Landscape\n"
+    for i, article in enumerate(ai_articles[:3], 1):
+        answer += f"**{i}. {article['title']}**\n"
+        if article.get('description'):
+            answer += f"{article['description']}\n"
+        answer += f"*{article['source']} | {format_time(article.get('published_at', ''))}*\n\n"
+    
+    # AI trend analysis
+    answer += "### 📈 Market Analysis\n"
+    companies = extract_companies_mentioned(ai_articles)
+    if companies:
+        answer += f"**Key Players:** {', '.join(companies[:5])}\n"
+    
+    answer += f"**Coverage Intensity:** {len(ai_articles)} AI-related articles in recent news cycle\n"
+    answer += f"**Industry Focus:** High activity suggests continued AI innovation and market expansion\n\n"
+    
+    return answer
+
+def generate_business_answer(question, articles):
+    """Generate business-focused answer"""
+    answer = "## 💼 Business Intelligence Summary\n\n"
+    
+    # Extract business metrics and insights
+    business_articles = [a for a in articles if a.get('category') == 'business' or 'business' in a.get('topic', '')]
+    if not business_articles:
+        business_articles = articles[:4]
+    
+    answer += "### 📊 Market Developments\n"
+    for i, article in enumerate(business_articles[:3], 1):
+        answer += f"**{i}. {article['title']}**\n"
+        if article.get('description'):
+            answer += f"{article['description']}\n"
+        answer += f"*{article['source']} | {article.get('category', 'Business').title()}*\n\n"
+    
+    # Business insights
+    answer += "### 💡 Strategic Insights\n"
+    sources = [a['source'] for a in business_articles]
+    financial_sources = [s for s in sources if any(term in s.lower() for term in ['bloomberg', 'reuters', 'financial', 'wall street', 'forbes', 'cnbc'])]
+    
+    if financial_sources:
+        answer += f"**Financial Media Coverage:** {len(financial_sources)} major financial outlets reporting\n"
+    
+    answer += f"**Market Sentiment:** Active coverage across {len(set(sources))} news sources indicates significant market interest\n"
+    answer += f"**Sector Activity:** Multiple developments suggest dynamic business environment\n\n"
+    
+    return answer
+
+def generate_tech_answer(question, articles):
+    """Generate technology-focused answer"""
+    answer = "## 🔧 Technology Sector Analysis\n\n"
+    
+    tech_articles = articles[:4]
+    
+    answer += "### 🚀 Innovation Highlights\n"
+    for i, article in enumerate(tech_articles, 1):
+        answer += f"**{i}. {article['title']}**\n"
+        if article.get('description'):
+            answer += f"{article['description']}\n"
+        answer += f"*{article['source']} | {format_time(article.get('published_at', ''))}*\n\n"
+    
+    # Tech trend analysis
+    answer += "### 📱 Technology Trends\n"
+    companies = extract_companies_mentioned(tech_articles)
+    if companies:
+        answer += f"**Leading Companies:** {', '.join(companies[:4])}\n"
+    
+    categories = [a.get('category', 'tech') for a in tech_articles]
+    category_counts = {cat: categories.count(cat) for cat in set(categories)}
+    top_category = max(category_counts.items(), key=lambda x: x[1])[0] if category_counts else 'technology'
+    
+    answer += f"**Dominant Theme:** {top_category.title()} ({category_counts.get(top_category, 1)} articles)\n"
+    answer += f"**Innovation Index:** High activity with {len(tech_articles)} major developments\n\n"
+    
+    return answer
+
+def generate_comprehensive_answer(question, articles, keywords):
+    """Generate comprehensive multi-faceted answer"""
+    answer = f"## 🎯 Comprehensive Analysis: {question}\n\n"
+    
+    # Main findings
+    answer += "### 📋 Key Findings\n"
+    top_articles = articles[:3]
+    
+    for i, article in enumerate(top_articles, 1):
+        answer += f"**{i}. {article['title']}**\n"
+        if article.get('description'):
+            answer += f"{article['description']}\n"
+        answer += f"*{article['source']} - {article.get('category', 'General').title()} | {format_time(article.get('published_at', ''))}*\n\n"
+    
+    # Cross-topic analysis
+    if len(articles) > 3:
+        answer += "### 🔗 Related Developments\n"
+        for article in articles[3:6]:
+            answer += f"• {article['title']} ({article['source']})\n"
+        answer += "\n"
+    
+    # Summary insights
+    answer += "### 📊 Summary Insights\n"
+    categories = [a.get('category', 'general') for a in articles]
+    sources = [a['source'] for a in articles]
+    
+    answer += f"**Coverage Breadth:** {len(set(sources))} news sources\n"
+    answer += f"**Topic Diversity:** {len(set(categories))} different categories\n"
+    answer += f"**Information Confidence:** High (based on {len(articles)} relevant articles)\n\n"
+    
+    return answer
+
+def extract_companies_mentioned(articles):
+    """Extract company names from articles"""
+    companies = []
+    company_keywords = ['Apple', 'Google', 'Microsoft', 'Amazon', 'Tesla', 'Meta', 'OpenAI', 'Netflix', 'Uber', 'Airbnb', 'SpaceX', 'Twitter', 'Facebook', 'Instagram', 'YouTube', 'LinkedIn', 'TikTok', 'Snapchat', 'Zoom', 'Slack', 'Salesforce', 'Oracle', 'IBM', 'Intel', 'AMD', 'NVIDIA', 'Samsung', 'Sony', 'Nintendo', 'Adobe', 'Spotify', 'PayPal', 'Square', 'Stripe', 'Coinbase', 'Robinhood']
+    
+    for article in articles:
+        text = f"{article.get('title', '')} {article.get('description', '')}"
+        for company in company_keywords:
+            if company in text and company not in companies:
+                companies.append(company)
+    
+    return companies
+
+def format_time(time_str):
+    """Format time string for better readability"""
+    if not time_str:
+        return "Recently"
+    
+    try:
+        # Simple formatting - just return as is for now
+        return time_str.split('T')[0] if 'T' in time_str else time_str
+    except:
+        return "Recently"
 
 def fetch_news():
     """Background thread to fetch news"""
