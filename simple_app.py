@@ -540,7 +540,7 @@ if __name__ == '__main__':
     fetcher_thread.start()
     
     print("🚀 Starting Live News Analyst (HYBRID AI SYSTEM)")
-    if gemini_model:
+    if GEMINI_AVAILABLE and gemini_model:
         print("🤖 PREMIUM MODE: Gemini AI + Advanced Fallback")
     else:
         print("🧠 ADVANCED MODE: Intelligent Analysis System")
