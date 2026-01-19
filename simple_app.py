@@ -1,5 +1,5 @@
 """
-Completely FREE version - No paid APIs!
+100% FREE News Analyst - No paid APIs!
 Uses intelligent text analysis and keyword matching
 """
 import os
@@ -101,67 +101,18 @@ def find_relevant_articles(question, articles):
     scored_articles.sort(key=lambda x: x[1], reverse=True)
     return [article for article, score in scored_articles[:8]]
 
-def generate_analytical_answer(question, articles, keywords):
-    """Generate analytical answer for how/why/when questions"""
-    answer = f"## 🔍 Analysis: {question}\n\n"
-    
-    top_article = articles[0]
-    
-    # Provide analytical context
-    if "how" in question.lower():
-        answer += "### 📋 Process & Methodology\n"
-    elif "why" in question.lower():
-        answer += "### 🎯 Reasoning & Context\n"
-    elif "when" in question.lower():
-        answer += "### ⏰ Timeline & Schedule\n"
-    else:
-        answer += "### 🔬 Detailed Analysis\n"
-    
-    answer += f"**Primary Source:** {top_article['title']}\n\n"
-    
-    if top_article.get('description'):
-        answer += f"{top_article['description']}\n\n"
-    
-    # Add supporting evidence
-    if len(articles) > 1:
-        answer += "### 📚 Supporting Evidence\n"
-        for i, article in enumerate(articles[1:4], 1):
-            answer += f"{i}. **{article['title']}**\n"
-            if article.get('description'):
-                # Get first meaningful sentence
-                sentences = article['description'].split('.')
-                if sentences:
-                    answer += f"   {sentences[0].strip()}.\n"
-            answer += f"   *{article['source']}*\n\n"
-    
-    # Expert analysis section
-    answer += "### 💡 Expert Perspective\n"
-    sources = [a['source'] for a in articles[:3]]
-    authoritative_sources = [s for s in sources if any(term in s.lower() for term in ['reuters', 'bloomberg', 'associated press', 'bbc', 'cnn', 'wall street journal', 'financial times'])]
-    
-    if authoritative_sources:
-        answer += f"Analysis is supported by {len(authoritative_sources)} authoritative news sources including {', '.join(authoritative_sources[:2])}, "
-        answer += "providing high confidence in the information accuracy.\n\n"
-    else:
-        answer += f"Information compiled from {len(sources)} news sources, providing comprehensive coverage of the topic.\n\n"
-    
-    return answer
-    """Generate comprehensive, intelligent answers that will win hackathons!"""
+def generate_smart_answer(question, relevant_articles):
+    """Generate comprehensive, intelligent answers"""
     if not relevant_articles:
         return "I don't have any recent news articles that directly relate to your question. Please try asking about technology, business, science, or current events."
     
     question_lower = question.lower()
     
-    # Enhanced question analysis
-    question_keywords = extract_keywords(question)
-    
     # Determine question intent and generate appropriate response
     if any(word in question_lower for word in ["latest", "recent", "new", "update", "current", "today"]):
-        return generate_latest_news_answer(question, relevant_articles, question_keywords)
+        return generate_latest_news_answer(question, relevant_articles)
     elif any(word in question_lower for word in ["what", "what's", "what is", "tell me about"]):
-        return generate_explanatory_answer(question, relevant_articles, question_keywords)
-    elif any(word in question_lower for word in ["how", "why", "when", "where"]):
-        return generate_analytical_answer(question, relevant_articles, question_keywords)
+        return generate_explanatory_answer(question, relevant_articles)
     elif any(word in question_lower for word in ["ai", "artificial intelligence", "machine learning", "chatgpt"]):
         return generate_ai_focused_answer(question, relevant_articles)
     elif any(word in question_lower for word in ["business", "company", "market", "stock", "economy"]):
@@ -169,44 +120,38 @@ def generate_analytical_answer(question, articles, keywords):
     elif any(word in question_lower for word in ["technology", "tech", "software", "app", "digital"]):
         return generate_tech_answer(question, relevant_articles)
     else:
-        return generate_comprehensive_answer(question, relevant_articles, question_keywords)
+        return generate_comprehensive_answer(question, relevant_articles)
 
-def generate_latest_news_answer(question, articles, keywords):
+def generate_latest_news_answer(question, articles):
     """Generate answer focused on latest developments"""
     answer = "## 📰 Latest Developments\n\n"
     answer += "Based on the most recent news coverage, here are the key developments:\n\n"
     
-    # Group articles by recency and importance
-    top_articles = articles[:5]
-    
-    for i, article in enumerate(top_articles, 1):
+    for i, article in enumerate(articles[:5], 1):
         answer += f"### {i}. {article['title']}\n"
         if article.get('description'):
-            # Extract key insights from description
-            desc = article['description']
-            answer += f"**Key Points:** {desc}\n\n"
+            answer += f"**Key Points:** {article['description']}\n\n"
         
         answer += f"**Source:** {article['source']} | **Category:** {article.get('category', 'General').title()}\n"
         answer += f"**Published:** {format_time(article.get('published_at', ''))}\n\n"
     
     # Add trend analysis
     categories = [a.get('category', 'general') for a in articles]
-    top_category = max(set(categories), key=categories.count) if categories else 'technology'
-    
-    answer += f"### 📊 Trend Analysis\n"
-    answer += f"The dominant theme in recent news is **{top_category}**, appearing in {categories.count(top_category)} out of {len(articles)} relevant articles. "
-    answer += f"This suggests significant activity in the {top_category} sector.\n\n"
+    if categories:
+        top_category = max(set(categories), key=categories.count)
+        answer += f"### 📊 Trend Analysis\n"
+        answer += f"The dominant theme in recent news is **{top_category}**, appearing in {categories.count(top_category)} out of {len(articles)} relevant articles. "
+        answer += f"This suggests significant activity in the {top_category} sector.\n\n"
     
     return answer
 
-def generate_explanatory_answer(question, articles, keywords):
+def generate_explanatory_answer(question, articles):
     """Generate detailed explanatory answer"""
     top_article = articles[0]
     
-    answer = f"## 💡 {question}\n\n"
+    answer = f"## 💡 Analysis: {question}\n\n"
     answer += f"Based on recent news analysis, here's what's happening:\n\n"
     
-    # Main explanation from top article
     answer += f"### Primary Development\n"
     answer += f"**{top_article['title']}**\n\n"
     
@@ -221,7 +166,6 @@ def generate_explanatory_answer(question, articles, keywords):
         for article in articles[1:4]:
             answer += f"• **{article['title']}** ({article['source']})\n"
             if article.get('description'):
-                # Extract first sentence for context
                 first_sentence = article['description'].split('.')[0] + '.'
                 answer += f"  {first_sentence}\n"
         answer += "\n"
@@ -246,7 +190,7 @@ def generate_ai_focused_answer(question, articles):
             ai_articles.append(article)
     
     if not ai_articles:
-        ai_articles = articles[:3]  # Fallback to top articles
+        ai_articles = articles[:3]
     
     answer += "### 🚀 Current AI Landscape\n"
     for i, article in enumerate(ai_articles[:3], 1):
@@ -270,7 +214,6 @@ def generate_business_answer(question, articles):
     """Generate business-focused answer"""
     answer = "## 💼 Business Intelligence Summary\n\n"
     
-    # Extract business metrics and insights
     business_articles = [a for a in articles if a.get('category') == 'business' or 'business' in a.get('topic', '')]
     if not business_articles:
         business_articles = articles[:4]
@@ -316,14 +259,15 @@ def generate_tech_answer(question, articles):
     
     categories = [a.get('category', 'tech') for a in tech_articles]
     category_counts = {cat: categories.count(cat) for cat in set(categories)}
-    top_category = max(category_counts.items(), key=lambda x: x[1])[0] if category_counts else 'technology'
+    if category_counts:
+        top_category = max(category_counts.items(), key=lambda x: x[1])[0]
+        answer += f"**Dominant Theme:** {top_category.title()} ({category_counts.get(top_category, 1)} articles)\n"
     
-    answer += f"**Dominant Theme:** {top_category.title()} ({category_counts.get(top_category, 1)} articles)\n"
     answer += f"**Innovation Index:** High activity with {len(tech_articles)} major developments\n\n"
     
     return answer
 
-def generate_comprehensive_answer(question, articles, keywords):
+def generate_comprehensive_answer(question, articles):
     """Generate comprehensive multi-faceted answer"""
     answer = f"## 🎯 Comprehensive Analysis: {question}\n\n"
     
@@ -374,7 +318,6 @@ def format_time(time_str):
         return "Recently"
     
     try:
-        # Simple formatting - just return as is for now
         return time_str.split('T')[0] if 'T' in time_str else time_str
     except:
         return "Recently"
@@ -428,12 +371,10 @@ def fetch_news():
             print(f"⚠️  Error fetching news: {e}")
             time.sleep(10)
 
-
 @app.route('/')
 def home():
     """Serve the web interface"""
     return render_template('index.html')
-
 
 @app.route('/api/status')
 def status():
@@ -443,7 +384,6 @@ def status():
         "articles_count": len(news_articles),
         "topics": NEWS_TOPICS
     })
-
 
 @app.route('/api/articles')
 def get_articles():
@@ -463,7 +403,6 @@ def get_articles():
         ],
         "total": len(news_articles)
     })
-
 
 @app.route('/api/stats')
 def get_stats():
@@ -488,7 +427,6 @@ def get_stats():
         "top_sources": dict(sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:5]),
         "last_updated": news_articles[-1]['fetched_at'] if news_articles else None
     })
-
 
 @app.route('/v1/pw_ai_answer', methods=['POST'])
 def answer_question():
@@ -568,7 +506,6 @@ def answer_question():
             "error": f"Technical error: {error_type}",
             "details": error_msg
         }), 500
-
 
 if __name__ == '__main__':
     # Start news fetcher in background
