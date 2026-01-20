@@ -307,45 +307,22 @@ PORT=8080  # Optional, defaults to 8080
 
 ---
 
-## 🎬 Video Demonstration - Pipeline Evidence
+## 🎬 Video Demonstration
 
-**Complete Pipeline Demonstration (3 minutes):**
+**3-Minute Demo Structure:**
+1. **Problem Introduction** (30s) - Traditional RAG latency issues
+2. **Live Demo** (120s) - Real-time behavior proof with before/after queries
+3. **Technical Innovation** (30s) - Intelligent analysis without paid APIs
 
-### **Streaming Ingestion Evidence (60s)**
-- **Show:** Live dashboard with real-time article counter
-- **Demonstrate:** Background thread polling GNews API every 60 seconds
-- **Prove:** New articles appearing automatically in the feed
-- **Observable:** Console logs showing "📰 New article: [title]" messages
-
-### **Transformation Evidence (60s)**  
-- **Show:** Raw news data vs. intelligent analysis output
-- **Demonstrate:** Keyword extraction and topic categorization in action
-- **Prove:** Simple headlines transformed into professional intelligence reports
-- **Observable:** Before/after comparison of data quality and structure
-
-### **Output/Action Evidence (60s)**
-- **Show:** Professional-grade responses with real-time knowledge updates
-- **Demonstrate:** Same query producing different results after new data ingestion
-- **Prove:** Enterprise-level formatting with trend analysis and citations
-- **Observable:** Timestamps proving information freshness and response evolution
-
-**Key Pipeline Proof Points:**
-- ✅ **Streaming Ingestion**: Live article counters increasing in real-time
-- ✅ **Transformation**: Raw JSON → Intelligent categorized analysis  
-- ✅ **Output/Action**: Professional reports with real-time knowledge updates
-
-See [VIDEO_DEMO_SCRIPT.md](VIDEO_DEMO_SCRIPT.md) for complete recording guide with pipeline evidence focus.
+**Key Proof Points:**
+- Same question asked 60 seconds apart shows different results
+- Live statistics demonstrate continuous article ingestion
+- Professional-grade responses rival expensive AI services
+- Timestamps prove information freshness
 
 ## 📄 Documentation
 
-**Complete Technical Documentation:** [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md)
-
-Includes:
-- Executive Summary & Problem Statement
-- Solution Architecture & Technical Implementation  
-- Performance Metrics & Business Impact
-- API Specifications & Deployment Guide
-- Innovation Highlights & Future Roadmap
+This README contains all necessary documentation for setup, usage, and understanding the system architecture.
 
 ---
 
